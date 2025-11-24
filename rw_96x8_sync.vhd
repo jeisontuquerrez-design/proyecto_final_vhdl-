@@ -1,0 +1,41 @@
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+
+entity rw_96x8_sync is
+    port (
+        clock       : in  std_logic;
+        reset       : in  std_logic;
+        address_int : in  integer range 0 to 255;
+        datain      : in  std_logic_vector(7 downto 0);
+        writen       : in  std_logic;
+        dataout     : out std_logic_vector(7 downto 0)
+    );
+end entity;
+
+architecture rtl of rw_96x8_sync is
+    type ram_type is array (0 to 127) of std_logic_vector(7 downto 0);
+    signal RAM          : ram_type;
+    signal rw_dataout_i : std_logic_vector(7 downto 0);
+begin
+    process(clock, reset)
+    begin
+        if reset = '1' then
+            for i in 0 to 127 loop
+                RAM(i) <= (others => '0');
+            end loop;
+            rw_dataout_i <= (others => '0');
+        elsif rising_edge(clock) then
+            if address_int >= 128 and address_int <= 255 then
+                if writen = '1' then
+                    RAM(address_int - 128) <= datain;
+                end if;
+                rw_dataout_i <= RAM(address_int - 128);
+            else
+                rw_dataout_i <= (others => '0');
+            end if;
+        end if;
+    end process;
+
+    dataout <= rw_dataout_i;
+end architecture;

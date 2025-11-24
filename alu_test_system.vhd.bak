@@ -1,0 +1,110 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity alu_test_system is
+    port (
+        clk         : in  std_logic;
+        reset       : in  std_logic;
+        op_sel      : in  std_logic_vector(2 downto 0);  -- Selector de operación (3 switches)
+        input_b     : in  std_logic_vector(7 downto 0);  -- Entrada B (8 switches)
+        flags_led   : out std_logic_vector(3 downto 0);  -- LEDs para banderas NZVC
+        -- Displays de 7 segmentos (ánodo común)
+        disp_b_hi   : out std_logic_vector(6 downto 0);  -- Display alto para B
+        disp_b_lo   : out std_logic_vector(6 downto 0);  -- Display bajo para B  
+        disp_res_hi : out std_logic_vector(6 downto 0);  -- Display alto para Resultado
+        disp_res_lo : out std_logic_vector(6 downto 0)   -- Display bajo para Resultado
+    );
+end entity;
+
+architecture structural of alu_test_system is
+    
+    -- Señales internas
+    signal alu_result : std_logic_vector(7 downto 0);
+    signal nzvc_flags : std_logic_vector(3 downto 0);
+    signal reg_a      : std_logic_vector(7 downto 0);
+    signal reg_b      : std_logic_vector(7 downto 0);
+    
+    -- Componente ALU
+    component alu is
+        port (
+            A       : in  std_logic_vector(7 downto 0);
+            B       : in  std_logic_vector(7 downto 0);
+            ALU_Sel : in  std_logic_vector(2 downto 0);
+            Result  : out std_logic_vector(7 downto 0);
+            NZVC    : out std_logic_vector(3 downto 0)
+        );
+    end component;
+    
+    -- Componente para display de 7 segmentos
+    component hex_to_7seg is
+        port (
+            hex_value : in  std_logic_vector(3 downto 0);
+            seg_out   : out std_logic_vector(6 downto 0)
+        );
+    end component;
+    
+begin
+    
+    -- Registro para A (valor fijo para pruebas)
+    process(clk, reset)
+    begin
+        if reset = '0' then
+            reg_a <= x"05";  -- Valor por defecto para A
+        elsif rising_edge(clk) then
+            reg_a <= x"05";  -- Puedes cambiar este valor para pruebas
+        end if;
+    end process;
+    
+    -- Registro para B (desde switches)
+    process(clk, reset)
+    begin
+        if reset = '0' then
+            reg_b <= (others => '0');
+        elsif rising_edge(clk) then
+            reg_b <= input_b;
+        end if;
+    end process;
+    
+    -- Instancia de la ALU
+    alu_inst: alu
+        port map (
+            A       => reg_a,
+            B       => reg_b,
+            ALU_Sel => op_sel,
+            Result  => alu_result,
+            NZVC    => nzvc_flags
+        );
+    
+    -- Display para byte alto de B
+    disp_b_high: hex_to_7seg
+        port map (
+            hex_value => reg_b(7 downto 4),
+            seg_out   => disp_b_hi
+        );
+    
+    -- Display para byte bajo de B  
+    disp_b_low: hex_to_7seg
+        port map (
+            hex_value => reg_b(3 downto 0),
+            seg_out   => disp_b_lo
+        );
+    
+    -- Display para byte alto del Resultado
+    disp_res_high: hex_to_7seg
+        port map (
+            hex_value => alu_result(7 downto 4),
+            seg_out   => disp_res_hi
+        );
+    
+    -- Display para byte bajo del Resultado
+    disp_res_low: hex_to_7seg
+        port map (
+            hex_value => alu_result(3 downto 0),
+            seg_out   => disp_res_lo
+        );
+    
+    -- Asignación de LEDs para banderas
+    flags_led <= nzvc_flags;
+    
+end architecture;

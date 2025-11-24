@@ -1,0 +1,116 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity alu is
+    port (
+        A       : in  std_logic_vector(7 downto 0);
+        B       : in  std_logic_vector(7 downto 0);
+        ALU_Sel : in  std_logic_vector(2 downto 0);
+        Result  : out std_logic_vector(7 downto 0);
+        NZVC    : out std_logic_vector(3 downto 0)  -- N, Z, V, C
+    );
+end entity;
+
+architecture behavioral of alu is
+begin
+    ALU_PROCESS : process (A, B, ALU_Sel)
+        variable Sum_uns    : unsigned(8 downto 0);
+        variable Diff_uns   : unsigned(8 downto 0);
+        variable Temp_uns   : unsigned(8 downto 0);
+    begin
+        case ALU_Sel is
+            when "000" => -- ADDITION (A + B)
+                Sum_uns := unsigned('0' & A) + unsigned('0' & B);
+                Result <= std_logic_vector(Sum_uns(7 downto 0));
+                NZVC(3) <= Sum_uns(7);
+                if (Sum_uns(7 downto 0) = x"00") then
+                    NZVC(2) <= '1';
+                else
+                    NZVC(2) <= '0';
+                end if;
+                if ((A(7)='0' and B(7)='0' and Sum_uns(7)='1') or
+                    (A(7)='1' and B(7)='1' and Sum_uns(7)='0')) then
+                    NZVC(1) <= '1';
+                else
+                    NZVC(1) <= '0';
+                end if;
+                NZVC(0) <= Sum_uns(8);
+
+            when "001" => -- SUBTRACTION (A - B)
+                Diff_uns := unsigned('0' & A) - unsigned('0' & B);
+                Result <= std_logic_vector(Diff_uns(7 downto 0));
+                NZVC(3) <= Diff_uns(7);
+                if (Diff_uns(7 downto 0) = x"00") then
+                    NZVC(2) <= '1';
+                else
+                    NZVC(2) <= '0';
+                end if;
+                if ((A(7)='0' and B(7)='1' and Diff_uns(7)='1') or
+                    (A(7)='1' and B(7)='0' and Diff_uns(7)='0')) then
+                    NZVC(1) <= '1';
+                else
+                    NZVC(1) <= '0';
+                end if;
+                NZVC(0) <= not Diff_uns(8);
+
+            when "010" => -- AND (A and B)
+                Result <= A and B;
+                NZVC(3) <= Result(7);
+                if (Result = x"00") then
+                    NZVC(2) <= '1';
+                else
+                    NZVC(2) <= '0';
+                end if;
+                NZVC(1) <= '0';
+                NZVC(0) <= '0';
+
+            when "011" => -- OR (A or B)
+                Result <= A or B;
+                NZVC(3) <= Result(7);
+                if (Result = x"00") then
+                    NZVC(2) <= '1';
+                else
+                    NZVC(2) <= '0';
+                end if;
+                NZVC(1) <= '0';
+                NZVC(0) <= '0';
+
+            when "100" => -- INCREMENT A (A + 1)
+                Temp_uns := unsigned('0' & A) + 1;
+                Result <= std_logic_vector(Temp_uns(7 downto 0));
+                NZVC(3) <= Temp_uns(7);
+                if (Temp_uns(7 downto 0) = x"00") then
+                    NZVC(2) <= '1';
+                else
+                    NZVC(2) <= '0';
+                end if;
+                if (A = x"7F") then
+                    NZVC(1) <= '1';
+                else
+                    NZVC(1) <= '0';
+                end if;
+                NZVC(0) <= Temp_uns(8);
+
+            when "101" => -- DECREMENT A (A - 1)
+                Temp_uns := unsigned('0' & A) - 1;
+                Result <= std_logic_vector(Temp_uns(7 downto 0));
+                NZVC(3) <= Temp_uns(7);
+                if (Temp_uns(7 downto 0) = x"00") then
+                    NZVC(2) <= '1';
+                else
+                    NZVC(2) <= '0';
+                end if;
+                if (A = x"80") then
+                    NZVC(1) <= '1';
+                else
+                    NZVC(1) <= '0';
+                end if;
+                NZVC(0) <= not Temp_uns(8);
+
+            when others =>
+                Result <= x"00";
+                NZVC <= "0000";
+        end case;
+    end process;
+end architecture;
